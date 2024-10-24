@@ -26,11 +26,13 @@ int main(int argc, char* argv[])
 	Each line in the input file is stored as an hex and is 1 byte (each four lines are one instruction). You need to read the file line by line and store it into the memory. You may need a mechanism to convert these values to bits so that you can read opcodes, operands, etc.
 	*/
 
+
+
 	char instMem[4096];
 
 
 	if (argc < 2) {
-		//cout << "No file name entered. Exiting...";
+		cout << "No file name entered. Exiting...";
 		return -1;
 	}
 
@@ -41,47 +43,66 @@ int main(int argc, char* argv[])
 	}
 	string line; 
 	int i = 0;
-	while (infile) {
-			infile>>line;
-			stringstream line2(line);
-			char x; 
-			line2>>x;
-			instMem[i] = x; // be careful about hex
-			i++;
-			line2>>x;
-			instMem[i] = x; // be careful about hex
-			cout<<instMem[i]<<endl;
-			i++;
+    while (getline(infile, line)) {
+			if (line.length() != 2) {
+			//cout << "line is" + line << endl;
+            cout << "Invalid input line length. Expected 2 characters per line.\n";
+            return -1;
+        }
+
+        // Convert the hex string (2 characters) to a byte and store in memory
+        char byte = (char)strtol(line.c_str(), nullptr, 16);
+        instMem[i] = byte;
+        i++;
 		}
-	int maxPC= i/4; 
-
-	/* Instantiate your CPU object here.  CPU class is the main class in this project that defines different components of the processor.
-	CPU class also has different functions for each stage (e.g., fetching an instruction, decoding, etc.).
-	*/
-
-	CPU myCPU;  // call the approriate constructor here to initialize the processor...  
-	// make sure to create a variable for PC and resets it to zero (e.g., unsigned int PC = 0); 
-
-	/* OPTIONAL: Instantiate your Instruction object here. */
-	//Instruction myInst; 
 	
+	
+
+	int maxPC= i; 
+	
+	CPU myCPU;  
+
+	bitset<32> myInst; //
+	instruction instr = instruction(myInst);
+
 	bool done = true;
 	while (done == true) // processor's main loop. Each iteration is equal to one clock cycle.  
 	{
-		//fetch
-		
+		//fetch instruction
+		myInst = myCPU.Fetch(instMem);
+		instr = instruction(myInst);
 
+		//cout << "Fetched instruction (in hex): " << hex << myInst.to_ulong() << endl;
+	
 		// decode
+		done = myCPU.Decode(&instr);
+	    if (done == false) {
+		    break;
+		}
 		
+		// execute
+		myCPU.Execute();
+		
+		//writeback
+		myCPU.WriteBack();
+
+		if (!myCPU.pcUpdated)
+			myCPU.incPC();
+		else 
+			myCPU.pcUpdated = false;
+
 		// ... 
-		myCPU.incPC();
-		if (myCPU.readPC() > maxPC)
+        if (myCPU.readPC() >= maxPC) {
+			//cout << "PC is reached. " << endl;
 			break;
+		}
 	}
-	int a0 =0;
-	int a1 =0;  
+
+	// print the results
+	 int a0 = myCPU.registerFile[10];  // a0 is x10
+     int a1 = myCPU.registerFile[11];  // a1 is x11  
 	// print the results (you should replace a0 and a1 with your own variables that point to a0 and a1)
-	  cout << "(" << a0 << "," << a1 << ")" << endl;
+	  cout << "(" << dec << a0 << "," << dec << a1 << ")" << endl;
 	
 	return 0;
 
