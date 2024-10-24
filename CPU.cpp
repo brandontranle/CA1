@@ -58,6 +58,9 @@ bitset<32> CPU::Fetch(const char* instMem) {
 
 bool CPU::Decode(instruction* instr) {
     bitset<32> inst = instr->instr;  // Access the instruction from the instruction object
+    
+    decodedInstr = {}; // Clear all fields (HOLY MOLY THIS WAS THE SOLUTION)
+    //cout << "Struct cleared!" << endl;
 
     // Decode basic fields: opcode, rd, funct3, funct7, rs1, rs2
     decodedInstr.opcode = (inst.to_ulong() & 0x7F);
@@ -172,6 +175,7 @@ bool CPU::Decode(instruction* instr) {
         case 0x37: // LUI
         {
             //decodedInstr.imm = (inst.to_ulong() & 0xFFFFF000);  // LUI uses the upper 20 bits as immediate
+            decodedInstr.imm = (inst.to_ulong() >> 12) & 0xFFFFF;  // Extract the upper 20 bits
             decodedInstr.op_type = "LUI";
             break;
         }
@@ -191,13 +195,15 @@ bool CPU::Decode(instruction* instr) {
 
     /*
     // Debug output for the decoded instruction
-    cout << "Decoded instruction: " + decodedInstr.op_type << endl;
+    cout << "Decoded instruction Type: " + decodedInstr.op_type << endl;
+    cout << "Instruction: 0x" << hex << inst.to_ulong() << endl;
     cout << "Opcode: " << decodedInstr.opcode << endl;
     cout << "rs1: " << decodedInstr.rs1 << endl;
     cout << "rs2: " << decodedInstr.rs2 << endl;
     cout << "rd: " << decodedInstr.rd << endl;
     cout << "Immediate: " << decodedInstr.imm << endl;
     */
+    
 
     //cout << "Successful Instruction: " << hex << inst.to_ulong() << endl;
 
@@ -244,16 +250,21 @@ void CPU::Execute() {
         // Load Byte: Compute the address and load the byte from memory
         int32_t address = decodedInstr.rs1 + decodedInstr.imm;
         int8_t byte = dmemory[address];
-        executeInstr.alu_result = (int32_t) (int8_t) (byte);  // sign-extend the byte to 32 bits        
+        executeInstr.alu_result = (int32_t)(int8_t)(byte);  // sign-extend the byte to 32 bits        
         //cout << "Loaded byte from address: " << address << " Value: " << hex << static_cast<int>(byte) << endl;
     } 
     else if (curr == "LW"){
         int32_t address = decodedInstr.rs1 + decodedInstr.imm;
+
+        /*
         uint32_t word = ((((dmemory[address + 3]) << 24)) | 
                          ((dmemory[address + 2]) << 16) | 
                          ((dmemory[address + 1]) << 8) | 
                          (dmemory[address])); 
-        executeInstr.alu_result = static_cast<int32_t>(word);  
+
+        */
+       uint32_t word = dmemory[address];
+       executeInstr.alu_result = static_cast<int32_t>(word);  
     } else if (curr == "SW"){
         // Store word into memory (32-bit)
         int32_t address = decodedInstr.rs1 + decodedInstr.imm;  // The address is calculated in Execute()
@@ -265,14 +276,15 @@ void CPU::Execute() {
         dmemory[address + 1] = (word_to_store >> 8) & 0xFF00;
         dmemory[address] = (word_to_store >> 0) & 0xFF;  // The last byte is stored in the lower 8 bits of rs2
         */
+        
         dmemory[address] = word_to_store;
     }
     else if (curr == "SB") {
         // Store Byte: Compute the effective address and store the byte
-        int32_t address = decodedInstr.rs1 + decodedInstr.imm;
+        int8_t address = decodedInstr.rs1 + decodedInstr.imm;
 
         // Store byte into memory (8-bit)
-        uint8_t byte_to_store = static_cast<uint8_t>(executeInstr.rs2 & 0xFF);  // The byte to store is in the lower 8 bits of rs2
+        int8_t byte_to_store = static_cast<uint8_t>(executeInstr.rs2 & 0xFF);  // The byte to store is in the lower 8 bits of rs2
 
         // Store the byte into memory
         dmemory[address] = byte_to_store;
@@ -294,7 +306,7 @@ void CPU::Execute() {
     else if (curr == "JAL") {
         // Jump and Link: Write the return address (PC + 4) to rd, and update PC to target
         executeInstr.alu_result = PC + 4;
-        int32_t jump_offset = decodedInstr.imm;
+        int32_t jump_offset = (decodedInstr.imm & 0x80000) ? (decodedInstr.imm | 0xFFF00000) : decodedInstr.imm;
         PC += jump_offset; 
         pcUpdated = true;
     
@@ -303,6 +315,9 @@ void CPU::Execute() {
         // Zero: Set the ALU result to 0
         executeInstr.alu_result = 0;
     }
+
+    //cout << "PC: " << PC << endl;
+    //cout << "ALU result: " << executeInstr.alu_result << endl;
 }
 
 void CPU::WriteBack() {
