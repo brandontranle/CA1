@@ -298,7 +298,8 @@ void CPU::Execute() {
         PC += jump_offset; 
         pcUpdated = true;
     
-    } else if (curr == "ZERO") {
+    } 
+    else if (curr == "ZERO") {
         // Zero: Set the ALU result to 0
         executeInstr.alu_result = 0;
     }
@@ -309,13 +310,13 @@ void CPU::WriteBack() {
     string curr = executeInstr.op_type;
 
     // Avoid writing to register x0 (always zero in RISC-V) && SW, SB do not write to register
-    if (executeInstr.rd == 0 || executeInstr.op_type == "SW" || executeInstr.op_type == "SB") {
+    if (executeInstr.rd == 0 || curr == "SW" || curr == "SB") {
         //cout << "WriteBack: No register writeback needed for instruction " << curr << endl;
         return;
     }
     
-
-     if (curr != "NULL"  && curr != "SB" && curr != "SW" && curr != "ZERO") {
+    //note: PC is incremented after WriteBack (so we exclude BEQ)
+     if (curr != "NULL" && curr != "BEQ") {
         registerFile[executeInstr.rd] = executeInstr.alu_result;  // Write ALU result
         //cout << "WriteBack: Writing result to register x" << executeInstr.rd << ": " << registerFile[executeInstr.rd] << endl;
     }
