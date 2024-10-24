@@ -1,7 +1,7 @@
 #include <iostream>
 #include <bitset>
 #include <stdio.h>
-#include<stdlib.h>
+#include <stdlib.h>
 #include <string>
 #include <cstdint>
 #include <cctype>
@@ -48,7 +48,6 @@ public:
 	int32_t registerFile[32];
 	unsigned long readPC();
 	void incPC();
-	void writePC(unsigned long value);
 	bitset<32> Fetch(const char* instMem);
 	bool Decode(instruction* instr);
 	void Execute();
