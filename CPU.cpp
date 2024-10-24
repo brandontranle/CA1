@@ -262,19 +262,16 @@ void CPU::Execute() {
 }
 
 void CPU::WriteBack() {
-    // Use the operation type from the memory stage (since WriteBack happens after MemoryAccess)
     string curr = executeInstr.op_type;
 
     // Avoid writing to register x0 (always zero in RISC-V) && SW, SB do not write to register
     if (executeInstr.rd == 0 || curr == "SW" || curr == "SB") {
-        //cout << "WriteBack: No register writeback needed for instruction " << curr << endl;
         return;
     }
     
     //note: PC is incremented after WriteBack (so we exclude BEQ)
      if (curr != "NULL" && curr != "BEQ") {
         registerFile[executeInstr.rd] = executeInstr.alu_result;  // Write ALU result
-        //cout << "WriteBack: Writing result to register x" << executeInstr.rd << ": " << registerFile[executeInstr.rd] << endl;
     }
 }
 
